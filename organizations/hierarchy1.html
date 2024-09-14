@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Organization Hierarchy Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1, h2, h3 {
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: inline-block;
+            width: 150px;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"], select {
+            width: 200px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 5px 10px;
+        }
+
+        #org-hierarchy-tree ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        #org-hierarchy-tree li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Organization Hierarchy Management</h1>
+
+    <!-- Section to define organization types -->
+    <div id="org-type-definition">
+        <h2>Define Organization Types</h2>
+        <form id="org-type-form">
+            <label for="org-type-name">Name:</label>
+            <input type="text" id="org-type-name" name="org-type-name" required><br>
+
+            <label for="org-type-parents">Parent Types:</label>
+            <select id="org-type-parents" name="org-type-parents" multiple></select><br>
+
+            <label for="org-type-access">Data Access Mode:</label>
+            <select id="org-type-access" name="org-type-access" required>
+                <option value="own">Own</option>
+                <option value="children">Children</option>
+                <option value="descendants">Descendants</option>
+            </select><br>
+
+            <button type="submit">Add Organization Type</button>
+        </form>
+    </div>
+
+    <!-- Section to display and manage the organization hierarchy -->
+    <div id="org-hierarchy-management">
+        <h2>Organization Hierarchy</h2>
+        <div id="org-hierarchy-tree"></div>
+
+        <!-- Form to add organization instances -->
+        <h3>Add Organization Instance</h3>
+        <form id="org-instance-form">
+            <label for="org-instance-name">Name:</label>
+            <input type="text" id="org-instance-name" name="org-instance-name" required><br>
+
+            <label for="org-instance-type">Type:</label>
+            <select id="org-instance-type" name="org-instance-type" required></select><br>
+
+            <label for="org-instance-parent">Parent Organization:</label>
+            <select id="org-instance-parent" name="org-instance-parent"></select><br>
+
+            <button type="submit">Add Organization Instance</button>
+        </form>
+    </div>
+
+    <!-- Include JavaScript here -->
+    <script>
+        // Data structures
+        var orgTypes = {};
+        var orgInstances = {};
+
+        // Function to update the parent types dropdown in the org-type-form
+        function updateOrgTypeParents() {
+            var parentSelect = document.getElementById('org-type-parents');
+            parentSelect.innerHTML = '';
+
+            // Add options for existing types
+            for (var typeKey in orgTypes) {
+                var option = document.createElement('option');
+                option.value = typeKey;
+                option.textContent = orgTypes[typeKey].name;
+                parentSelect.appendChild(option);
+            }
+        }
+
+        // Function to update the organization instance type dropdown
+        function updateOrgInstanceTypes() {
+            var typeSelect = document.getElementById('org-instance-type');
+            typeSelect.innerHTML = '';
+
+            // Add options for existing types
+            for (var typeKey in orgTypes) {
+                var option = document.createElement('option');
+                option.value = typeKey;
+                option.textContent = orgTypes[typeKey].name;
+                typeSelect.appendChild(option);
+            }
+        }
+
+        // Function to update the parent organization dropdown in the org-instance-form
+        function updateOrgInstanceParents() {
+            var parentSelect = document.getElementById('org-instance-parent');
+            parentSelect.innerHTML = '';
+
+            // Add an option for no parent (root)
+            var option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'None (Root Organization)';
+            parentSelect.appendChild(option);
+
+            // Add options for existing organization instances
+            for (var instanceKey in orgInstances) {
+                var option = document.createElement('option');
+                option.value = instanceKey;
+                option.textContent = orgInstances[instanceKey].name + ' (' + orgTypes[orgInstances[instanceKey].type].name + ')';
+                parentSelect.appendChild(option);
+            }
+        }
+
+        // Handle the submission of the org-type-form
+        document.getElementById('org-type-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var typeName = document.getElementById('org-type-name').value.trim();
+            var parentTypes = Array.from(document.getElementById('org-type-parents').selectedOptions).map(option => option.value);
+            var dataAccessMode = document.getElementById('org-type-access').value;
+
+            if (typeName === '') {
+                alert('Organization type name is required.');
+                return;
+            }
+
+            // Generate a unique key for the type
+            var typeKey = typeName.toLowerCase().replace(/\s+/g, '_');
+
+            if (orgTypes[typeKey]) {
+                alert('An organization type with this name already exists.');
+                return;
+            }
+
+            // Add the new type to orgTypes
+            orgTypes[typeKey] = {
+                name: typeName,
+                parentTypes: parentTypes,
+                dataAccessMode: dataAccessMode
+            };
+
+            // Update the parent types dropdown
+            updateOrgTypeParents();
+            updateOrgInstanceTypes();
+
+            // Clear the form
+            document.getElementById('org-type-form').reset();
+
+            alert('Organization type added.');
+        });
+
+        // Handle the submission of the org-instance-form
+        document.getElementById('org-instance-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var instanceName = document.getElementById('org-instance-name').value.trim();
+            var instanceType = document.getElementById('org-instance-type').value;
+            var parentInstanceKey = document.getElementById('org-instance-parent').value;
+
+            if (instanceName === '') {
+                alert('Organization instance name is required.');
+                return;
+            }
+
+            if (!orgTypes[instanceType]) {
+                alert('Invalid organization type.');
+                return;
+            }
+
+            // Check if the parent organization is acceptable
+            if (parentInstanceKey !== '') {
+                var parentInstance = orgInstances[parentInstanceKey];
+                var parentType = parentInstance.type;
+
+                var acceptableParents = orgTypes[instanceType].parentTypes;
+
+                if (!acceptableParents.includes(parentType)) {
+                    alert('Selected parent organization is not an acceptable parent for this type.');
+                    return;
+                }
+            } else {
+                // If no parent is selected, check if the type allows no parent (i.e., parentTypes is empty)
+                if (orgTypes[instanceType].parentTypes.length > 0) {
+                    alert('This organization type requires a parent organization.');
+                    return;
+                }
+            }
+
+            // Generate a unique key for the instance
+            var instanceKey = 'org_' + Object.keys(orgInstances).length;
+
+            // Add the new instance to orgInstances
+            orgInstances[instanceKey] = {
+                name: instanceName,
+                type: instanceType,
+                parent: parentInstanceKey
+            };
+
+            // Update the parent organization dropdown
+            updateOrgInstanceParents();
+
+            // Update the organization hierarchy tree
+            renderOrgHierarchyTree();
+
+            // Clear the form
+            document.getElementById('org-instance-form').reset();
+
+            alert('Organization instance added.');
+        });
+
+        // Function to render the organization hierarchy tree
+        function renderOrgHierarchyTree() {
+            var treeContainer = document.getElementById('org-hierarchy-tree');
+            treeContainer.innerHTML = '';
+
+            // Build the tree data structure
+            var treeData = {};
+
+            // First, find all root organizations (those without a parent)
+            for (var instanceKey in orgInstances) {
+                var instance = orgInstances[instanceKey];
+                if (!instance.parent) {
+                    treeData[instanceKey] = buildSubTree(instanceKey);
+                }
+            }
+
+            // Function to recursively build the subtree
+            function buildSubTree(instanceKey) {
+                var subtree = {
+                    name: orgInstances[instanceKey].name + ' (' + orgTypes[orgInstances[instanceKey].type].name + ')',
+                    children: []
+                };
+
+                for (var childKey in orgInstances) {
+                    if (orgInstances[childKey].parent === instanceKey) {
+                        subtree.children.push(buildSubTree(childKey));
+                    }
+                }
+
+                return subtree;
+            }
+
+            // Function to render the tree
+            function renderTree(node, container) {
+                var li = document.createElement('li');
+                li.textContent = node.name;
+
+                if (node.children && node.children.length > 0) {
+                    var ul = document.createElement('ul');
+                    node.children.forEach(function(childNode) {
+                        renderTree(childNode, ul);
+                    });
+                    li.appendChild(ul);
+                }
+
+                container.appendChild(li);
+            }
+
+            // Create the tree list
+            var ul = document.createElement('ul');
+            for (var rootKey in treeData) {
+                renderTree(treeData[rootKey], ul);
+            }
+
+            treeContainer.appendChild(ul);
+        }
+
+        // Initialize the forms
+        updateOrgTypeParents();
+        updateOrgInstanceTypes();
+        updateOrgInstanceParents();
+
+    </script>
+</body>
+</html>
