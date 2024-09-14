@@ -152,7 +152,21 @@ class OrganizationManager extends HTMLElement {
           cursor: pointer;
           display: inline-block;
         }
-        /* Add styles for drag-and-drop feedback */
+        .instances-table-container {
+          overflow-x: auto;
+        }
+        .instances-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+        .instances-table th, .instances-table td {
+          border: 1px solid #ddd;
+          padding: 8px;
+        }
+        .instances-table th {
+          background-color: #f2f2f2;
+        }
       `;
       const html = `
         <div class="container">
@@ -263,9 +277,12 @@ class OrganizationManager extends HTMLElement {
           <div class="hierarchy-tabs">
             <div class="${this.currentHierarchyTab === 'tree' ? 'active' : ''}" id="tab-tree">Tree</div>
             <div class="${this.currentHierarchyTab === 'graph' ? 'active' : ''}" id="tab-graph">Graph</div>
+            <div class="${this.currentHierarchyTab === 'table' ? 'active' : ''}" id="tab-table">Table</div>
           </div>
           <div class="hierarchy-content">
-            ${this.currentHierarchyTab === 'tree' ? this.renderTreeTab() : '<div id="graph"></div>'}
+            ${this.currentHierarchyTab === 'tree' ? this.renderTreeTab()
+              : this.currentHierarchyTab === 'graph' ? '<div id="graph"></div>'
+              : this.renderInstancesTable()}
           </div>
         </div>
       `;
@@ -284,7 +301,17 @@ class OrganizationManager extends HTMLElement {
       // Get parent types
       const parentTypeIds = selectedType.parent;
       const parentInstances = this.instances.filter(inst => parentTypeIds.includes(inst.type));
-      return '<option value="">None</option>' + parentInstances.map(inst => `<option value="${inst.id}">${inst.name}</option>`).join('');
+      let options = '';
+      if (parentInstances.length === 0) {
+        options = '<option value="">None</option>';
+      } else {
+        let firstOption = true;
+        parentInstances.forEach(inst => {
+          options += `<option value="${inst.id}" ${firstOption ? 'selected' : ''}>${inst.name}</option>`;
+          firstOption = false;
+        });
+      }
+      return options;
     }
   
     buildHierarchy() {
@@ -333,6 +360,52 @@ class OrganizationManager extends HTMLElement {
       return type ? type.color : 'grey';
     }
   
+    renderInstancesTable() {
+      return `
+        <div class="instances-table-container">
+          <table class="instances-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Parent</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${this.instances.map(inst => `
+                <tr data-id="${inst.id}">
+                  <td contenteditable="true" class="edit-instance-name">${inst.name}</td>
+                  <td>${this.renderInstanceTypeSelect(inst)}</td>
+                  <td>${this.renderInstanceParentSelect(inst)}</td>
+                  <td><button class="delete-instance-btn">Delete</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  
+    renderInstanceTypeSelect(inst) {
+      return `<select class="edit-instance-type">
+        ${this.types.map(t => `
+          <option value="${t.id}" ${t.id === inst.type ? 'selected' : ''}>${t.name}</option>
+        `).join('')}
+      </select>`;
+    }
+  
+    renderInstanceParentSelect(inst) {
+      const selectedType = this.types.find(t => t.id === inst.type);
+      const parentTypeIds = selectedType ? selectedType.parent : [];
+      const parentInstances = this.instances.filter(i => parentTypeIds.includes(i.type) && i.id !== inst.id);
+      let options = '<option value="">None</option>';
+      parentInstances.forEach(pInst => {
+        options += `<option value="${pInst.id}" ${pInst.id === inst.parent_organization_id ? 'selected' : ''}>${pInst.name}</option>`;
+      });
+      return `<select class="edit-instance-parent">${options}</select>`;
+    }
+  
     addEventListeners() {
       // Utility function to safely add event listeners
       const addEventListenerIfExists = (selector, event, handler) => {
@@ -363,6 +436,11 @@ class OrganizationManager extends HTMLElement {
         this.currentHierarchyTab = 'graph';
         this.render();
         this.renderGraph();
+      });
+  
+      addEventListenerIfExists('#tab-table', 'click', () => {
+        this.currentHierarchyTab = 'table';
+        this.render();
       });
   
       // Create Type
@@ -429,6 +507,72 @@ class OrganizationManager extends HTMLElement {
         const parentSelect = this.shadowRoot.querySelector('#instance-parent');
         parentSelect.innerHTML = this.getParentOptions();
       });
+  
+      // Instances Table - Inline Editing and Deletion
+      const instanceTable = this.shadowRoot.querySelector('table.instances-table');
+      if (instanceTable) {
+        // Edit Instance Name
+        instanceTable.querySelectorAll('.edit-instance-name').forEach(cell => {
+          cell.addEventListener('blur', (e) => {
+            const id = e.target.closest('tr').dataset.id;
+            const instance = this.instances.find(inst => inst.id === id);
+            if (instance) {
+              instance.name = e.target.textContent.trim();
+              this.saveInstances();
+            }
+          });
+        });
+  
+        // Edit Instance Type
+        instanceTable.querySelectorAll('.edit-instance-type').forEach(select => {
+          select.addEventListener('change', (e) => {
+            const id = e.target.closest('tr').dataset.id;
+            const instance = this.instances.find(inst => inst.id === id);
+            if (instance) {
+              instance.type = e.target.value;
+              // Update the parent select options
+              const parentSelect = e.target.closest('tr').querySelector('.edit-instance-parent');
+              const selectedType = this.types.find(t => t.id === instance.type);
+              const parentTypeIds = selectedType ? selectedType.parent : [];
+              const parentInstances = this.instances.filter(i => parentTypeIds.includes(i.type) && i.id !== instance.id);
+              let options = '<option value="">None</option>';
+              parentInstances.forEach(pInst => {
+                options += `<option value="${pInst.id}" ${pInst.id === instance.parent_organization_id ? 'selected' : ''}>${pInst.name}</option>`;
+              });
+              parentSelect.innerHTML = options;
+              // Reset parent if it's no longer compatible
+              if (instance.parent_organization_id && !parentTypeIds.includes(this.instances.find(i => i.id === instance.parent_organization_id).type)) {
+                instance.parent_organization_id = null;
+                parentSelect.value = '';
+              }
+              this.saveInstances();
+            }
+          });
+        });
+  
+        // Edit Instance Parent
+        instanceTable.querySelectorAll('.edit-instance-parent').forEach(select => {
+          select.addEventListener('change', (e) => {
+            const id = e.target.closest('tr').dataset.id;
+            const instance = this.instances.find(inst => inst.id === id);
+            if (instance) {
+              const parentId = e.target.value || null;
+              instance.parent_organization_id = parentId;
+              this.saveInstances();
+            }
+          });
+        });
+  
+        // Delete Instance
+        instanceTable.querySelectorAll('.delete-instance-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.closest('tr').dataset.id;
+            this.instances = this.instances.filter(inst => inst.id !== id);
+            this.saveInstances();
+            this.render();
+          });
+        });
+      }
     }
   
     renderGraph() {
