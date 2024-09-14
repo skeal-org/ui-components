@@ -5,7 +5,7 @@ class OrganizationManager extends HTMLElement {
       this.types = [];
       this.instances = [];
       this.currentMainTab = 'types';
-      this.currentHierarchyTab = 'tree';
+      this.currentHierarchyTab = 'table';
       this.selectedInstanceType = 'root';
       this.loadData();
       this.render();
@@ -63,11 +63,55 @@ class OrganizationManager extends HTMLElement {
         .panel {
           flex: 1;
           display: flex;
+          flex-direction: column;
+        }
+        .column-container {
+          display: flex;
+          flex: 1;
+          overflow-y: auto;
         }
         .column {
           flex: 1;
           padding: 10px;
           overflow-y: auto;
+        }
+        .hierarchy-tabs {
+          display: flex;
+          background-color: #f9f9f9;
+          border-bottom: 1px solid #ccc;
+        }
+        .hierarchy-tabs div {
+          padding: 10px 15px;
+          cursor: pointer;
+          border: 1px solid #ccc;
+          border-bottom: none;
+          background-color: #f9f9f9;
+          margin-right: 2px;
+        }
+        .hierarchy-tabs div.active {
+          background-color: #fff;
+          border-bottom: 1px solid #fff;
+          font-weight: bold;
+        }
+        .hierarchy-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px;
+        }
+        .instances-table-container {
+          overflow-x: auto;
+        }
+        .instances-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+        .instances-table th, .instances-table td {
+          border: 1px solid #ddd;
+          padding: 8px;
+        }
+        .instances-table th {
+          background-color: #f2f2f2;
         }
         .form-group {
           margin-bottom: 10px;
@@ -85,35 +129,7 @@ class OrganizationManager extends HTMLElement {
           padding: 8px 12px;
           cursor: pointer;
         }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 10px;
-        }
-        table, th, td {
-          border: 1px solid #ddd;
-        }
-        th, td {
-          padding: 8px;
-          text-align: left;
-        }
-        .hierarchy-tabs {
-          display: flex;
-          margin-bottom: 10px;
-        }
-        .hierarchy-tabs div {
-          padding: 8px 12px;
-          cursor: pointer;
-          border: 1px solid #ccc;
-          border-bottom: none;
-          background-color: #f9f9f9;
-          margin-right: 2px;
-        }
-        .hierarchy-tabs div.active {
-          background-color: #fff;
-          border-bottom: 1px solid #fff;
-          font-weight: bold;
-        }
+        /* Additional styles for tree and graph */
         .tree ul {
           list-style-type: none;
           padding-left: 20px;
@@ -152,21 +168,6 @@ class OrganizationManager extends HTMLElement {
           cursor: pointer;
           display: inline-block;
         }
-        .instances-table-container {
-          overflow-x: auto;
-        }
-        .instances-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 10px;
-        }
-        .instances-table th, .instances-table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-        }
-        .instances-table th {
-          background-color: #f2f2f2;
-        }
       `;
       const html = `
         <div class="container">
@@ -185,104 +186,136 @@ class OrganizationManager extends HTMLElement {
   
     renderTypesTab() {
       return `
-        <div class="column">
-          <h3>Create Organization Type</h3>
-          <div class="form-group">
-            <label for="type-name">Name:</label>
-            <input type="text" id="type-name" />
+        <div class="column-container">
+          <div class="column">
+            <h3>Create Organization Type</h3>
+            <div class="form-group">
+              <label for="type-name">Name:</label>
+              <input type="text" id="type-name" />
+            </div>
+            <div class="form-group">
+              <label for="type-parents">Parent Types:</label>
+              <select id="type-parents" multiple>
+                ${this.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="type-data-access">Data Access Mode:</label>
+              <select id="type-data-access">
+                <option value="own">Own</option>
+                <option value="children">Children</option>
+                <option value="descendants">Descendants</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="type-color">Color:</label>
+              <select id="type-color">
+                <option value="white">White</option>
+                <option value="red">Red</option>
+                <option value="orange">Orange</option>
+                <option value="yellow">Yellow</option>
+                <option value="green">Green</option>
+                <option value="blue">Blue</option>
+                <option value="violet">Violet</option>
+                <option value="brown">Brown</option>
+                <option value="black">Black</option>
+              </select>
+            </div>
+            <button id="create-type-btn">Create Type</button>
           </div>
-          <div class="form-group">
-            <label for="type-parents">Parent Types:</label>
-            <select id="type-parents" multiple>
-              ${this.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="type-data-access">Data Access Mode:</label>
-            <select id="type-data-access">
-              <option value="own">Own</option>
-              <option value="children">Children</option>
-              <option value="descendants">Descendants</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="type-color">Color:</label>
-            <select id="type-color">
-              <option value="white">White</option>
-              <option value="red">Red</option>
-              <option value="orange">Orange</option>
-              <option value="yellow">Yellow</option>
-              <option value="green">Green</option>
-              <option value="blue">Blue</option>
-              <option value="violet">Violet</option>
-              <option value="brown">Brown</option>
-              <option value="black">Black</option>
-            </select>
-          </div>
-          <button id="create-type-btn">Create Type</button>
-        </div>
-        <div class="column">
-          <h3>Organization Types</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Parents</th>
-                <th>Data Access</th>
-                <th>Color</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${this.types.map(t => `
-                <tr data-id="${t.id}">
-                  <td contenteditable="true" class="edit-name">${t.name}</td>
-                  <td>${t.parent.map(pid => this.getTypeName(pid)).join(', ')}</td>
-                  <td>${t.data_access}</td>
-                  <td>${t.color}</td>
-                  <td><button class="delete-type-btn">Delete</button></td>
+          <div class="column">
+            <h3>Organization Types</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Parents</th>
+                  <th>Data Access</th>
+                  <th>Color</th>
+                  <th>Actions</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${this.types.map(t => `
+                  <tr data-id="${t.id}">
+                    <td contenteditable="true" class="edit-name">${t.name}</td>
+                    <td>${t.parent.map(pid => this.getTypeName(pid)).join(', ')}</td>
+                    <td>${t.data_access}</td>
+                    <td>${t.color}</td>
+                    <td><button class="delete-type-btn">Delete</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       `;
     }
   
     renderHierarchyTab() {
       return `
-        <div class="column">
-          <h3>Create Organization Instance</h3>
-          <div class="form-group">
-            <label for="instance-name">Name:</label>
-            <input type="text" id="instance-name" />
-          </div>
-          <div class="form-group">
-            <label for="instance-type">Type:</label>
-            <select id="instance-type">
-              ${this.types.map(t => `
-                <option value="${t.id}" ${t.id === this.selectedInstanceType ? 'selected' : ''}>${t.name}</option>
-              `).join('')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="instance-parent">Parent:</label>
-            <select id="instance-parent">
-              ${this.getParentOptions()}
-            </select>
-          </div>
-          <button id="create-instance-btn">Create Instance</button>
+        <div class="hierarchy-tabs">
+          <div class="${this.currentHierarchyTab === 'table' ? 'active' : ''}" id="tab-table">Table</div>
+          <div class="${this.currentHierarchyTab === 'tree' ? 'active' : ''}" id="tab-tree">Tree</div>
+          <div class="${this.currentHierarchyTab === 'graph' ? 'active' : ''}" id="tab-graph">Graph</div>
         </div>
-        <div class="column">
-          <div class="hierarchy-tabs">
-            <div class="${this.currentHierarchyTab === 'tree' ? 'active' : ''}" id="tab-tree">Tree</div>
-            <div class="${this.currentHierarchyTab === 'graph' ? 'active' : ''}" id="tab-graph">Graph</div>
-            <div class="${this.currentHierarchyTab === 'table' ? 'active' : ''}" id="tab-table">Table</div>
+        <div class="hierarchy-content">
+          ${this.currentHierarchyTab === 'table' ? this.renderInstancesTab()
+            : this.currentHierarchyTab === 'tree' ? this.renderTreeTab()
+            : '<div id="graph"></div>'}
+        </div>
+      `;
+    }
+  
+    renderInstancesTab() {
+      return `
+        <div class="column-container">
+          <div class="column">
+            <h3>Create Organization Instance</h3>
+            <div class="form-group">
+              <label for="instance-name">Name:</label>
+              <input type="text" id="instance-name" />
+            </div>
+            <div class="form-group">
+              <label for="instance-type">Type:</label>
+              <select id="instance-type">
+                ${this.types.map(t => `
+                  <option value="${t.id}" ${t.id === this.selectedInstanceType ? 'selected' : ''}>${t.name}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="instance-parent">Parent:</label>
+              <select id="instance-parent">
+                ${this.getParentOptions()}
+              </select>
+            </div>
+            <button id="create-instance-btn">Create Instance</button>
           </div>
-          <div class="hierarchy-content">
-            ${this.currentHierarchyTab === 'tree' ? this.renderTreeTab()
-              : this.currentHierarchyTab === 'graph' ? '<div id="graph"></div>'
-              : this.renderInstancesTable()}
+          <div class="column">
+            <h3>Organization Instances</h3>
+            <div class="instances-table-container">
+              <table class="instances-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Parent</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${this.instances.map(inst => `
+                    <tr data-id="${inst.id}">
+                      <td contenteditable="true" class="edit-instance-name">${inst.name}</td>
+                      <td>${this.renderInstanceTypeSelect(inst)}</td>
+                      <td>${this.renderInstanceParentSelect(inst)}</td>
+                      <td><button class="delete-instance-btn">Delete</button></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       `;
@@ -293,14 +326,16 @@ class OrganizationManager extends HTMLElement {
       return type ? type.name : '';
     }
   
-    getParentOptions() {
+    getParentOptions(selectedTypeId = null, excludeInstanceId = null) {
       // Get the selected type
-      const selectedTypeId = this.selectedInstanceType || 'root';
+      selectedTypeId = selectedTypeId || this.selectedInstanceType || 'root';
       const selectedType = this.types.find(t => t.id === selectedTypeId);
       if (!selectedType) return '<option value="">None</option>';
       // Get parent types
       const parentTypeIds = selectedType.parent;
-      const parentInstances = this.instances.filter(inst => parentTypeIds.includes(inst.type));
+      const parentInstances = this.instances.filter(inst =>
+        parentTypeIds.includes(inst.type) && inst.id !== excludeInstanceId
+      );
       let options = '';
       if (parentInstances.length === 0) {
         options = '<option value="">None</option>';
@@ -360,33 +395,6 @@ class OrganizationManager extends HTMLElement {
       return type ? type.color : 'grey';
     }
   
-    renderInstancesTable() {
-      return `
-        <div class="instances-table-container">
-          <table class="instances-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Parent</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${this.instances.map(inst => `
-                <tr data-id="${inst.id}">
-                  <td contenteditable="true" class="edit-instance-name">${inst.name}</td>
-                  <td>${this.renderInstanceTypeSelect(inst)}</td>
-                  <td>${this.renderInstanceParentSelect(inst)}</td>
-                  <td><button class="delete-instance-btn">Delete</button></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-  
     renderInstanceTypeSelect(inst) {
       return `<select class="edit-instance-type">
         ${this.types.map(t => `
@@ -427,6 +435,11 @@ class OrganizationManager extends HTMLElement {
       });
   
       // Hierarchy Tabs
+      addEventListenerIfExists('#tab-table', 'click', () => {
+        this.currentHierarchyTab = 'table';
+        this.render();
+      });
+  
       addEventListenerIfExists('#tab-tree', 'click', () => {
         this.currentHierarchyTab = 'tree';
         this.render();
@@ -436,11 +449,6 @@ class OrganizationManager extends HTMLElement {
         this.currentHierarchyTab = 'graph';
         this.render();
         this.renderGraph();
-      });
-  
-      addEventListenerIfExists('#tab-table', 'click', () => {
-        this.currentHierarchyTab = 'table';
-        this.render();
       });
   
       // Create Type
@@ -505,7 +513,7 @@ class OrganizationManager extends HTMLElement {
       addEventListenerIfExists('#instance-type', 'change', (e) => {
         this.selectedInstanceType = e.target.value;
         const parentSelect = this.shadowRoot.querySelector('#instance-parent');
-        parentSelect.innerHTML = this.getParentOptions();
+        parentSelect.innerHTML = this.getParentOptions(e.target.value);
       });
   
       // Instances Table - Inline Editing and Deletion

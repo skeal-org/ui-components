@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign In</title>
+  <style>
+    /* Basic styles */
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 400px;
+      margin: 80px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px;
+      width: 100%;
+    }
+    .option {
+      margin-top: 12px;
+      text-align: center;
+    }
+    .password-container {
+      position: relative;
+    }
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Sign In</h2>
+  <div class="form-group">
+    <label for="email">Email:</label>
+    <input type="email" id="email" required />
+  </div>
+  <div class="form-group password-container">
+    <label for="password">Password:</label>
+    <input type="password" id="password" required />
+    <span class="toggle-password" id="toggle-password">👁️</span>
+  </div>
+  <button id="signin-btn">Sign In</button>
+  <div class="form-group">
+    <label>
+      <input type="checkbox" id="use-local-storage" /> Work locally using local storage
+    </label>
+  </div>
+  <div class="option">
+    <a href="signup.html">Don't have an account? Sign Up</a>
+  </div>
+</div>
+
+<!-- Include Supabase JS Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabaseClient.js"></script>
+<script src="auth.js"></script>
+<script>
+  document.getElementById('toggle-password').addEventListener('click', () => {
+    const passwordField = document.getElementById('password');
+    const togglePassword = document.getElementById('toggle-password');
+    if (passwordField.type === 'password') {
+      passwordField.type = 'text';
+      togglePassword.textContent = '🙈'; // Change icon to closed eye
+    } else {
+      passwordField.type = 'password';
+      togglePassword.textContent = '👁️'; // Change icon to open eye
+    }
+  });
+
+  document.getElementById('signin-btn').addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const useLocalStorage = document.getElementById('use-local-storage').checked;
+
+    if (useLocalStorage) {
+      // Redirect to index.html and use local storage
+      sessionStorage.setItem('useLocalStorage', 'true');
+      window.location.href = 'index.html';
+      return;
+    }
+
+    try {
+      await signInWithEmail(email, password);
+      sessionStorage.setItem('useLocalStorage', 'false');
+      window.location.href = 'index.html';
+    } catch (error) {
+      alert('Error signing in: ' + error.message);
+    }
+  });
+</script>
+</body>
+</html>

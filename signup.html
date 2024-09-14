@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up</title>
+  <style>
+    /* Basic styles */
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 400px;
+      margin: 80px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px;
+      width: 100%;
+    }
+    .option {
+      margin-top: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Sign Up</h2>
+  <div class="form-group">
+    <label for="email">Email:</label>
+    <input type="email" id="email" required />
+  </div>
+  <div class="form-group">
+    <label for="password">Password:</label>
+    <input type="password" id="password" required />
+  </div>
+  <button id="signup-btn">Sign Up</button>
+  <div class="option">
+    <a href="signin.html">Already have an account? Sign In</a>
+  </div>
+</div>
+
+<!-- Include Supabase JS Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="supabaseClient.js"></script>
+<script src="auth.js"></script>
+<script>
+  document.getElementById('signup-btn').addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    try {
+      const user = await signUpWithEmail(email, password);
+      // After sign-up, create a profile and a client
+      const { data: profile, error: profileError } = await supabase.from('profiles').insert([
+        { id: user.id, client_id: null }
+      ]);
+      if (profileError) throw profileError;
+
+      // Optionally, create a client and associate it with the profile
+      const { data: client, error: clientError } = await supabase.from('clients').insert([
+        { hierarchy: null }
+      ]);
+      if (clientError) throw clientError;
+
+      // Update the profile with the client ID
+      const { error: updateProfileError } = await supabase.from('profiles').update({
+        client_id: client[0].id
+      }).eq('id', user.id);
+      if (updateProfileError) throw updateProfileError;
+
+      alert('Sign-up successful! Please sign in.');
+      window.location.href = 'signin.html';
+    } catch (error) {
+      alert('Error signing up: ' + error.message);
+    }
+  });
+</script>
+</body>
+</html>
