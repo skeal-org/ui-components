@@ -10,13 +10,14 @@ Client organisation types are stored as a json
   "unit":{"name":"Units", "parent": ["facility","region"], "data_access":"own","color":"blue"}
 }
 ```
-Each type has a name, a list of possible parent types a data access mode and a color.
-An organization of some specified type can only be parented by an organization belonging to the parent type.
-In the example above we can only create a facility under a region, but we can create a unit either under a facility or a region.
+Each type has a name, a list of possible parent types a data access mode and a color.  
+An organization of some specified type can only be parented by an organization belonging to the parent type.  
+In the example above we can only create a facility under a region, but we can create a unit either under a facility or a region.  
 the data access mode is one of
 * own : The organization will only access its own data
 * children : The organization will access its data and the one of all its children but not the ones of the grand-children,...
-* descendants : The organization will access its data and the one of all its children, grand-children,...
+* descendants : The organization will access its data and the one of all its children, grand-children,...  
+color is amoung white,red,orange,yellow,green,blue,violet,brown,black
 
 The component is made of 2 tabs Types and Hierarchy.
 
