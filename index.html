@@ -10,7 +10,10 @@
       margin: 0;
       padding: 0;
     }
-    organization-manager {
+    organization-manager, device-manager {
+      display: none;
+    }
+    organization-manager.active, device-manager.active {
       display: block;
     }
     .logout-btn {
@@ -18,13 +21,34 @@
       top: 10px;
       right: 10px;
     }
+    .tabs {
+      display: flex;
+      cursor: pointer;
+      margin: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      background-color: #f1f1f1;
+    }
+    .tab.active {
+      background-color: #fff;
+      border-bottom: 1px solid #fff;
+    }
   </style>
 </head>
 <body>
 
 <button class="logout-btn" id="logout-btn">Logout</button>
 
-<organization-manager></organization-manager>
+<div class="tabs">
+  <div class="tab active" id="org-tab">Organizations</div>
+  <div class="tab" id="dev-tab">Devices</div>
+</div>
+
+<organization-manager class="active"></organization-manager>
+<device-manager></device-manager>
 
 <!-- Include Supabase JS Library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,10 +77,26 @@
     sessionStorage.removeItem('useLocalStorage');
     window.location.href = 'signin.html';
   });
+
+  // Tab functionality
+  document.getElementById('org-tab').addEventListener('click', () => {
+    document.getElementById('org-tab').classList.add('active');
+    document.getElementById('dev-tab').classList.remove('active');
+    document.querySelector('organization-manager').classList.add('active');
+    document.querySelector('device-manager').classList.remove('active');
+  });
+
+  document.getElementById('dev-tab').addEventListener('click', () => {
+    document.getElementById('dev-tab').classList.add('active');
+    document.getElementById('org-tab').classList.remove('active');
+    document.querySelector('organization-manager').classList.remove('active');
+    document.querySelector('device-manager').classList.add('active');
+  });
 </script>
 
 <!-- Include D3.js library -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="organization-manager.js"></script>
+<script src="device-manager.js"></script>
 </body>
 </html>
