@@ -1,0 +1,1 @@
+## Skeal public images directory
