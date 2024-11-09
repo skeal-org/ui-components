@@ -2,6 +2,7 @@ class DeviceManager extends HTMLElement {
     constructor() {
       super();
       this.attachShadow({ mode: 'open' });
+      this.classList.add('tab-content');
     }
   
     connectedCallback() {

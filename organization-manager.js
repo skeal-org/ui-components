@@ -8,6 +8,7 @@ class OrganizationManager extends HTMLElement {
       this.currentHierarchyTab = 'table';
       this.selectedInstanceType = 'root';
       this.useLocalStorage = sessionStorage.getItem('useLocalStorage') === 'true';
+      this.classList.add('tab-content');
       this.loadData();
   }
 
