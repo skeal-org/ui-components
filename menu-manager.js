@@ -62,9 +62,8 @@ class MenuManager extends HTMLElement {
         }
 
         const form = this.shadowRoot.querySelector('form');
-        form.querySelector('input[name="id"]').value = menu.id;
-        form.querySelector('input[name="id"]').setAttribute('readonly', 'readonly');
 
+        form.querySelector('input[name="id"]').value = menu.id;
         form.querySelector('input[name="date"]').value = menu.date;
         form.querySelector('input[name="meal"]').value = menu.meal;
         form.querySelector('input[name="item"]').value = menu.item;
@@ -80,7 +79,6 @@ class MenuManager extends HTMLElement {
         const formData = new FormData(form);
         const organization_id = formData.get('organization_id')? parseInt(formData.get('organization_id').trim()) : null;
         const newMenu = {
-            id: parseInt(formData.get('id').trim()),
             date: formData.get('date').trim(),
             meal: formData.get('meal').trim(),
             item: parseInt(formData.get('item').trim()),
@@ -110,7 +108,6 @@ class MenuManager extends HTMLElement {
 
         if (form.dataset.editing){
           delete form.dataset.editing;
-          form.querySelector('input[name="id"]').removeAttribute('readonly');
         }
 
 
@@ -152,9 +149,22 @@ class MenuManager extends HTMLElement {
           }
         </style>
         <h2>Menu Manager</h2>
+
+        <div>
+          <form>
+            <input name="id" placeholder="ID" type="number" readonly>
+            <input name="date" placeholder="Date" required>
+            <input name="meal" placeholder="Meal" required>
+            <input name="item" placeholder="Item" required>
+            <input name="organization_id" placeholder="Organization ID" type="number">
+          <button type="submit">Create Menu</button>
+        </form>
+        </div>
+
         <table class="menu-table">
           <thead>
             <tr>
+              <th>Id</th>
               <th>Date</th>
               <th>Meal</th>
               <th>Item</th>
@@ -164,14 +174,6 @@ class MenuManager extends HTMLElement {
           </thead>
           <tbody></tbody>
         </table>
-        <form>
-          <input name="id" placeholder="ID" type="number">
-          <input name="date" placeholder="Date" required>
-          <input name="meal" placeholder="Meal" required>
-          <input name="item" placeholder="Item" required>
-          <input name="organization_id" placeholder="Organization ID" type="number">
-          <button type="submit">Create Menu</button>
-        </form>
       `;
     }
   }

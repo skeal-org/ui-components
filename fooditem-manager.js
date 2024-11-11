@@ -15,7 +15,7 @@ class FoodItemManager extends HTMLElement {
       const { data, error } = await supabaseClient
         .from('fooditem')
         .select('*')
-        .order('id', { ascending: true });
+        .order('id', { ascending: true });  
         
       if (error) {
         console.error('Error fetching food items:', error);
@@ -72,7 +72,6 @@ class FoodItemManager extends HTMLElement {
 
         const form = this.shadowRoot.querySelector('form');
         form.querySelector('input[name="id"]').value = foodItemId;
-        form.querySelector('input[name="id"]').setAttribute('readonly', 'readonly');
 
         form.querySelector('input[name="description"]').value = foodItem.description;
         form.querySelector('input[name="family"]').value = foodItem.family;
@@ -98,7 +97,6 @@ class FoodItemManager extends HTMLElement {
         const formData = new FormData(form);
         const organization_id = formData.get('organization_id')? parseInt(formData.get('organization_id').trim()) : null;
         const newFoodItem = {
-            id: parseInt(formData.get('id').trim()),
             description: formData.get('description').trim(),
             family: formData.get('family').trim(),
             category: formData.get('category').trim(),
@@ -136,7 +134,6 @@ class FoodItemManager extends HTMLElement {
 
         if (form.dataset.editing){
           delete form.dataset.editing;
-          form.querySelector('input[name="id"]').removeAttribute('readonly');
         }
 
         form.reset();
@@ -177,6 +174,26 @@ class FoodItemManager extends HTMLElement {
           }
         </style>
         <h2>Food Item Manager</h2>
+
+        <div>
+        <form>
+          <input name="id" placeholder="ID" type="number" readonly>
+          <input name="description" placeholder="Description" required>
+          <input name="family" placeholder="Family">
+          <input name="category" placeholder="Category">
+          <input name="type" placeholder="Type">
+          <input name="sub_type" placeholder="Sub Type">
+          <input name="eater_type" placeholder="Eater Type">
+          <input name="portion_g" placeholder="Portion (g)">
+          <input name="energy_kcal" placeholder="Energy (kcal)">
+          <input name="proteins_g" placeholder="Protein (g)">
+          <input name="carbs_g" placeholder="Carbs (g)">
+          <input name="fats_g" placeholder="Fats (g)">
+          <input name="portion_share" placeholder="Portion Share">
+          <input name="organization_id" placeholder="Organization ID" type="number">
+          <button type="submit">Create Food Item</button>
+        </form>        
+        </div>
         <table class="fooditem-table">
           <thead>
             <tr>
@@ -199,23 +216,6 @@ class FoodItemManager extends HTMLElement {
           </thead>
           <tbody></tbody>
         </table>
-        <form>
-          <input name="id" placeholder="ID" type="number">
-          <input name="description" placeholder="Description" required>
-          <input name="family" placeholder="Family">
-          <input name="category" placeholder="Category">
-          <input name="type" placeholder="Type">
-          <input name="sub_type" placeholder="Sub Type">
-          <input name="eater_type" placeholder="Eater Type">
-          <input name="portion_g" placeholder="Portion (g)">
-          <input name="energy_kcal" placeholder="Energy (kcal)">
-          <input name="proteins_g" placeholder="Protein (g)">
-          <input name="carbs_g" placeholder="Carbs (g)">
-          <input name="fats_g" placeholder="Fats (g)">
-          <input name="portion_share" placeholder="Portion Share">
-          <input name="organization_id" placeholder="Organization ID" type="number">
-          <button type="submit">Create Food Item</button>
-        </form>
       `;
     }
   }
