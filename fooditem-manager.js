@@ -149,7 +149,6 @@ class FoodItemManager extends HTMLElement {
   }
 
   selectSuggestion(suggestion) {
-    const descriptionInput = this.shadowRoot.querySelector('input[name="description"]');
     const categoryInput = this.shadowRoot.querySelector('input[name="category"]');
     const energyInput = this.shadowRoot.querySelector('input[name="energy_kcal"]');
     const proteinsInput = this.shadowRoot.querySelector('input[name="proteins_g"]');
@@ -157,7 +156,6 @@ class FoodItemManager extends HTMLElement {
     const fatsInput = this.shadowRoot.querySelector('input[name="fats_g"]');
 
     // Populate input fields with selected suggestion values
-    descriptionInput.value = suggestion.foodItemName.en || '';
     categoryInput.value = suggestion.categorySubGroup.en || '';
     energyInput.value = suggestion.energy_kcal || 0;
     proteinsInput.value = suggestion.proteins_g || 0;
@@ -241,7 +239,6 @@ class FoodItemManager extends HTMLElement {
   
     // Attach event listener for close button after rendering
     this.shadowRoot.querySelector('#close-popup').addEventListener('click', () => {
-      console.log('Close button clicked');
       this.shadowRoot.querySelector('#nutrition-popup').classList.add('hidden');
     });
   }
