@@ -207,10 +207,10 @@ class FoodItemManager extends HTMLElement {
           <form>
               <input name="description" placeholder="Description" required>
               <input name="category" placeholder="Category">
-              <input name="energy_kcal" placeholder="Energy (kcal)" type="number">
-              <input name="proteins_g" placeholder="Proteins (g)" type="number">
-              <input name="carbs_g" placeholder="Carbs (g)" type="number">
-              <input name="fats_g" placeholder="Fats (g)" type="number">
+              <input name="energy_kcal" placeholder="Energy (kcal)" type="number" step="any">
+              <input name="proteins_g" placeholder="Proteins (g)" type="number" step="any">
+              <input name="carbs_g" placeholder="Carbs (g)" type="number" step="any">
+              <input name="fats_g" placeholder="Fats (g)" type="number" step="any">
               <button type="submit">Add Food Item</button>
           </form>
           <button id="suggest-nutrition-btn" disabled>Suggest Nutritional Content</button>
