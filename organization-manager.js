@@ -488,7 +488,9 @@ class OrganizationManager extends HTMLElement {
   renderInstanceParentSelect(inst) {
       const selectedType = this.types.find(t => t.id === inst.type);
       const parentTypeIds = selectedType ? selectedType.parent : [];
+      console.log(' instances :', this.instances);
       const parentInstances = this.instances.filter(i => parentTypeIds.includes(i.type) && i.id !== inst.id);
+      console.log('Parent instances for', inst.name, ':', parentInstances);
       let options = '<option value="">None</option>';
       parentInstances.forEach(pInst => {
           options += `<option value="${pInst.id}" ${pInst.id === inst.parent_organization_id ? 'selected' : ''}>${pInst.name}</option>`;
@@ -731,7 +733,7 @@ class OrganizationManager extends HTMLElement {
                           const { data, error } = await supabaseClient.from('organization').delete().eq('id', id);
                           if (error) {
                               console.error('Error deleting organization:', error);
-                              alert('Error deleting organization');
+                              alert(`Error deleting organization: ${error.message}`);
                               return;
                           }
                           this.instances = this.instances.filter(inst => inst.id !== id);
