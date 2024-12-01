@@ -47,7 +47,6 @@
 </head>
 
 <body>
-
   <button class="logout-btn" id="logout-btn">Logout</button>
 
   <div id="tabs-container" class="tabs">
@@ -55,52 +54,34 @@
     <div class="tab" id="device">Devices</div>
     <div class="tab" id="menu">Menu</div>
     <div class="tab" id="fooditem">Food Items</div>
+    <div class="tab" id="secrets">Secrets</div>
   </div>
 
   <organization-manager class="active"></organization-manager>
   <device-manager></device-manager>
   <menu-manager></menu-manager>
   <fooditem-manager></fooditem-manager>
+  <secret-manager></secret-manager>
 
-  <!-- Include Supabase JS Library -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"
     integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabaseClient.js"></script>
   <script src="auth.js"></script>
+  <script src="secret-manager.js"></script>
   <script>
-    // Check if the user is authenticated or using local storage
-    const useLocalStorage = sessionStorage.getItem('useLocalStorage') === 'true';
-
-    if (!useLocalStorage) {
-      (async () => {
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
-        if (error) {
-          console.error('Error fetching user:', error);
-          window.location.href = 'signin.html';
-          return;
-        }
-        if (!user) {
-          window.location.href = 'signin.html';
-        }
-      })();
-    }
+    $('#tabs-container .tab').click(function () {
+      $(this).addClass('active').siblings().removeClass('active');
+      $('.tab-content').removeClass('active');
+      $(`${$(this).attr('id')}-manager`).addClass('active');
+    });
 
     document.getElementById('logout-btn').addEventListener('click', async () => {
       await signOut();
       sessionStorage.removeItem('useLocalStorage');
       window.location.href = 'signin.html';
     });
-
-    $('#tabs-container .tab').click(function () {
-      $(this).addClass('active').siblings().removeClass('active');
-      $('.tab-content').removeClass('active');
-      $(`${$(this).attr('id')}-manager`).addClass('active');
-    });
   </script>
-
-  <!-- Include D3.js library -->
-  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="organization-manager.js"></script>
   <script src="device-manager.js"></script>
   <script src="menu-manager.js"></script>
