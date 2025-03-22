@@ -200,21 +200,26 @@ class IntakeManager extends HTMLElement {
         const from = (this.currentPage - 1) * this.pageSize;
         const to = from + this.pageSize - 1;
 
-        // Build query
+        // Build query with joins for resident and food item
         let query = supabaseClient
             .from('intake')
             .select(`
-          id,
-          resident:resident_id (
-            id,
-            client_id
-          ),
-          menu_date,
-          served_picture,
-          cleared_picture,
-          estimated_intake_percent,
-          real_intake_percent
-        `)
+                id,
+                resident:resident_id (
+                    id,
+                    lastname,
+                    client_id
+                ),
+                fooditem:food_item_id (
+                    id,
+                    description
+                ),
+                menu_date,
+                served_picture,
+                cleared_picture,
+                estimated_intake_percent,
+                real_intake_percent
+            `)
             .range(from, to)
             .eq('resident.client_id', clientId);
 
@@ -240,25 +245,26 @@ class IntakeManager extends HTMLElement {
         tbody.innerHTML = intakes
             .map(
                 (item) => `
-        <tr>
-          <td>${item.id}</td>
-          <td>${item.resident?.id ?? ''}</td>
-          <td>${item.estimated_intake_percent ?? ''}</td>
-          <td>
-            <input type="number" value="${item.real_intake_percent ?? ''}" 
-                   min="0" max="100" data-id="${item.id}" class="inline-real-intake" />
-          </td>
-          <td>
-            <img src="${item.served_picture || ''}" alt="Served" style="height:100px;" />
-          </td>
-          <td>
-            <img src="${item.cleared_picture || ''}" alt="Cleared" style="height:100px;" />
-          </td>
-          <td>
-            <button class="view-btn" data-id="${item.id}">View</button>
-          </td>
-        </tr>
-      `
+            <tr>
+              <td>${item.id}</td>
+              <td>${item.resident?.lastname ?? ''}</td>
+              <td>${item.fooditem?.description ?? ''}</td>
+              <td>${item.estimated_intake_percent ?? ''}</td>
+              <td>
+                <input type="number" value="${item.real_intake_percent ?? ''}" 
+                       min="0" max="100" data-id="${item.id}" class="inline-real-intake" />
+              </td>
+              <td>
+                <img src="${item.served_picture || ''}" alt="Served" style="height:100px;" />
+              </td>
+              <td>
+                <img src="${item.cleared_picture || ''}" alt="Cleared" style="height:100px;" />
+              </td>
+              <td>
+                <button class="view-btn" data-id="${item.id}">View</button>
+              </td>
+            </tr>
+          `
             )
             .join('');
 
@@ -306,12 +312,12 @@ class IntakeManager extends HTMLElement {
             const { data, error } = await supabaseClient
                 .from('intake')
                 .select(`
-            id,
-            served_picture,
-            cleared_picture,
-            estimated_intake_percent,
-            real_intake_percent
-          `)
+                    id,
+                    served_picture,
+                    cleared_picture,
+                    estimated_intake_percent,
+                    real_intake_percent
+                `)
                 .eq('id', intakeId)
                 .single();
 
@@ -471,9 +477,10 @@ class IntakeManager extends HTMLElement {
           <table class="intake-table">
             <thead>
               <tr>
-                <th>Intake ID</th>
-                <th>Resident ID</th>
-                <th>Estimated %</th>
+                <th>Intake</th>
+                <th>Lastname</th>
+                <th>Food Item</th>
+                <th>Estim. %</th>
                 <th>Real %</th>
                 <th>Served</th>
                 <th>Cleared</th>
