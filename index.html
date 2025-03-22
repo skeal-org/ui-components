@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Skeal Manager</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     /* Basic styles */
     body {
@@ -43,6 +44,10 @@
       background-color: #fff;
       border-bottom: 1px solid #fff;
     }
+
+    .green-highlight {
+          background-color: rgb(5, 240, 5) !important;
+    }
   </style>
 </head>
 
@@ -54,17 +59,19 @@
     <div class="tab" id="device">Devices</div>
     <div class="tab" id="menu">Menu</div>
     <div class="tab" id="fooditem">Food Items</div>
-    <div class="tab" id="secrets">Secrets</div>
+    <div class="tab" id="intake">Intakes</div>
+    <div class="tab" id="secret">Secrets</div>
   </div>
 
-  <organization-manager class="active"></organization-manager>
-  <device-manager></device-manager>
-  <menu-manager></menu-manager>
-  <fooditem-manager></fooditem-manager>
-  <secret-manager></secret-manager>
-
+  <organization-manager class="tab-content active"></organization-manager>
+  <device-manager class="tab-content"></device-manager>
+  <menu-manager class="tab-content"></menu-manager>
+  <fooditem-manager class="tab-content"></fooditem-manager>
+  <intake-manager class="tab-content"></intake-manager>
+  <secret-manager class="tab-content"></secret-manager>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"
     integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabaseClient.js"></script>
   <script src="auth.js"></script>
@@ -86,6 +93,7 @@
   <script src="device-manager.js"></script>
   <script src="menu-manager.js"></script>
   <script src="fooditem-manager.js"></script>
+  <script src="intake-manager.js"></script>
 </body>
 
 </html>
