@@ -15,8 +15,6 @@ class IntakeManager extends HTMLElement {
         // Load client options immediately
         this.loadClientsIntoCombo();
 
-
-
         // When user changes client, re-init the datepicker
         this.shadowRoot.querySelector('#client_id').addEventListener('change', () => {
             this.currentPage = 1;
@@ -40,13 +38,20 @@ class IntakeManager extends HTMLElement {
             .querySelector('#next-btn')
             .addEventListener('click', () => this.changePage(1));
 
-        // Detail form => update real intake
+        // Detail form => update real intake from detail panel (if needed)
         this.shadowRoot
             .querySelector('#detail-form')
             .addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.updateRealIntake();
             });
+
+        const closeBtn = this.shadowRoot.querySelector('#close-detail-panel');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.shadowRoot.querySelector('#detail-panel').style.display = 'none';
+            });
+        }
     }
 
     // ----------------------------------------------------------------
@@ -128,7 +133,7 @@ class IntakeManager extends HTMLElement {
         // 1) Fetch the dates from Supabase for this client
         try {
             const { data, error } = await supabaseClient
-                .from('v_intake_menu_dates')  // or your table
+                .from('v_intake_menu_dates') // or your table
                 .select('menu_date')
                 .eq('client_id', clientId);
 
@@ -136,7 +141,7 @@ class IntakeManager extends HTMLElement {
                 console.error('Error fetching menu_date:', error);
                 this.existingDatesSet.clear();
             } else {
-                const dateStrings = data.map(item => item.menu_date);
+                const dateStrings = data.map((item) => item.menu_date);
                 this.existingDatesSet = new Set(dateStrings);
             }
         } catch (err) {
@@ -199,17 +204,17 @@ class IntakeManager extends HTMLElement {
         let query = supabaseClient
             .from('intake')
             .select(`
-        id,
-        resident:resident_id (
           id,
-          client_id
-        ),
-        menu_date,
-        served_picture,
-        cleared_picture,
-        estimated_intake_percent,
-        real_intake_percent
-      `)
+          resident:resident_id (
+            id,
+            client_id
+          ),
+          menu_date,
+          served_picture,
+          cleared_picture,
+          estimated_intake_percent,
+          real_intake_percent
+        `)
             .range(from, to)
             .eq('resident.client_id', clientId);
 
@@ -237,10 +242,18 @@ class IntakeManager extends HTMLElement {
                 (item) => `
         <tr>
           <td>${item.id}</td>
-          <!-- FIX: display item.resident?.id, since resident is { id, client_id } -->
           <td>${item.resident?.id ?? ''}</td>
           <td>${item.estimated_intake_percent ?? ''}</td>
-          <td>${item.real_intake_percent ?? ''}</td>
+          <td>
+            <input type="number" value="${item.real_intake_percent ?? ''}" 
+                   min="0" max="100" data-id="${item.id}" class="inline-real-intake" />
+          </td>
+          <td>
+            <img src="${item.served_picture || ''}" alt="Served" style="height:100px;" />
+          </td>
+          <td>
+            <img src="${item.cleared_picture || ''}" alt="Cleared" style="height:100px;" />
+          </td>
           <td>
             <button class="view-btn" data-id="${item.id}">View</button>
           </td>
@@ -249,7 +262,16 @@ class IntakeManager extends HTMLElement {
             )
             .join('');
 
-        // Attach "View" button events
+        // Attach event listeners for inline editing (update on blur)
+        this.shadowRoot.querySelectorAll('.inline-real-intake').forEach((input) => {
+            input.addEventListener('blur', (e) => {
+                const intakeId = e.target.dataset.id;
+                const newValue = e.target.value;
+                this.updateRealIntakeInline(intakeId, newValue);
+            });
+        });
+
+        // Attach "View" button events for the overlay detail panel
         this.shadowRoot.querySelectorAll('.view-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 const intakeId = e.target.dataset.id;
@@ -277,19 +299,19 @@ class IntakeManager extends HTMLElement {
     }
 
     // ----------------------------------------------------------------
-    // 6) VIEW INTAKE DETAIL
+    // 6) VIEW INTAKE DETAIL (OVERLAY PANEL)
     // ----------------------------------------------------------------
     async viewIntakeDetail(intakeId) {
         try {
             const { data, error } = await supabaseClient
                 .from('intake')
                 .select(`
-          id,
-          served_picture,
-          cleared_picture,
-          estimated_intake_percent,
-          real_intake_percent
-        `)
+            id,
+            served_picture,
+            cleared_picture,
+            estimated_intake_percent,
+            real_intake_percent
+          `)
                 .eq('id', intakeId)
                 .single();
 
@@ -300,20 +322,17 @@ class IntakeManager extends HTMLElement {
 
             // Populate detail section
             this.shadowRoot.querySelector('#detail-intake-id').textContent = data.id;
-            this.shadowRoot.querySelector('#served-img').src =
-                data.served_picture || '';
-            this.shadowRoot.querySelector('#cleared-img').src =
-                data.cleared_picture || '';
+            this.shadowRoot.querySelector('#served-img').src = data.served_picture || '';
+            this.shadowRoot.querySelector('#cleared-img').src = data.cleared_picture || '';
             this.shadowRoot.querySelector('#estimated-intake-percent').textContent =
                 data.estimated_intake_percent ?? '';
 
-            // FIX: store .id not .intake_id
+            // Store the intake id in the form for later updating (if needed)
             this.shadowRoot.querySelector('#detail-form').dataset.intakeId = data.id;
-
             this.shadowRoot.querySelector('#real_intake_percent').value =
                 data.real_intake_percent ?? '';
 
-            // Show the detail panel
+            // Show the detail panel as an overlay
             this.shadowRoot.querySelector('#detail-panel').style.display = 'block';
         } catch (err) {
             console.error('Unexpected error fetching detail:', err);
@@ -321,7 +340,7 @@ class IntakeManager extends HTMLElement {
     }
 
     // ----------------------------------------------------------------
-    // 7) UPDATE REAL INTAKE
+    // 7a) UPDATE REAL INTAKE FROM DETAIL PANEL
     // ----------------------------------------------------------------
     async updateRealIntake() {
         const detailForm = this.shadowRoot.querySelector('#detail-form');
@@ -331,9 +350,7 @@ class IntakeManager extends HTMLElement {
             return;
         }
 
-        const realIntake = this.shadowRoot.querySelector(
-            '#real_intake_percent'
-        ).value;
+        const realIntake = this.shadowRoot.querySelector('#real_intake_percent').value;
 
         try {
             const { error } = await supabaseClient
@@ -350,8 +367,30 @@ class IntakeManager extends HTMLElement {
             alert('Real intake updated successfully!');
             // Optionally refresh the list
             this.loadIntakes();
+            // Hide overlay panel if desired
+            this.shadowRoot.querySelector('#detail-panel').style.display = 'none';
         } catch (err) {
             console.error('Unexpected error updating intake:', err);
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // 7b) INLINE UPDATE FOR REAL INTAKE (FROM TABLE)
+    // ----------------------------------------------------------------
+    async updateRealIntakeInline(intakeId, newValue) {
+        try {
+            const { error } = await supabaseClient
+                .from('intake')
+                .update({ real_intake_percent: newValue })
+                .eq('id', intakeId);
+            if (error) {
+                console.error('Error updating inline real intake percent:', error);
+                alert('Failed to update inline intake.');
+                return;
+            }
+            console.log('Inline update successful for intake:', intakeId);
+        } catch (err) {
+            console.error('Unexpected error updating inline intake:', err);
         }
     }
 
@@ -360,109 +399,133 @@ class IntakeManager extends HTMLElement {
     // ----------------------------------------------------------------
     render() {
         this.shadowRoot.innerHTML = `
-      <style>
-        .intake-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .intake-table th, .intake-table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          vertical-align: top;
-        }
-        .intake-table th {
-          background-color: #f2f2f2;
-        }
-        #detail-panel {
-          margin-top: 1rem;
-          padding: 1rem;
-          border: 1px solid #ccc;
-          display: none; /* hidden by default */
-        }
-        .image-container {
-          display: flex;
-          gap: 40px;
-          margin-bottom: 1rem;
-        }
-        .image-block {
-          text-align: center;
-        }
-        .image-block img {
-          max-width: 200px;
-          display: block;
-          margin: 0 auto;
-        }
-      </style>
-
-      <h2>Intake Manager</h2>
-
-      <!-- Filter Form -->
-      <form id="filter-form">
-        <label for="client_id">Client:</label>
-        <select id="client_id"></select>
-
-        <!-- We use text input for jQuery UI Datepicker -->
-        <label for="menu_date">Menu Date:</label>
-        <input type="text" id="menu_date" />
-
-        <button type="submit">Search</button>
-      </form>
-
-      <!-- Table of Intakes -->
-      <table class="intake-table">
-        <thead>
-          <tr>
-            <th>Intake ID</th>
-            <th>Resident ID</th>
-            <th>Estimated %</th>
-            <th>Real %</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <!-- Pagination -->
-      <div>
-        <button id="prev-btn">Previous</button>
-        <span id="page-info"></span>
-        <button id="next-btn">Next</button>
-      </div>
-
-      <!-- Detail Panel -->
-      <div id="detail-panel">
-        <h3>Intake Detail (<span id="detail-intake-id"></span>)</h3>
-        <div class="image-container">
-          <div class="image-block">
-            <h4>Served</h4>
-            <img id="served-img" alt="Served" />
+          <style>
+            /* Table styles */
+            .intake-table {
+              width: 100%;
+              border-collapse: collapse;
+              position: relative;
+            }
+            .intake-table th, .intake-table td {
+              border: 1px solid #ddd;
+              padding: 8px;
+              vertical-align: top;
+            }
+            .intake-table th {
+              background-color: #f2f2f2;
+            }
+            /* Overlay detail panel styles */
+            #detail-panel {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: white;
+              padding: 1rem;
+              border: 1px solid #ccc;
+              z-index: 1000;
+              display: none; /* hidden by default */
+              box-shadow: 0 0 10px rgba(0,0,0,0.3);
+              min-width: 300px;
+            }
+            .image-container {
+              display: flex;
+              gap: 40px;
+              margin-bottom: 1rem;
+            }
+            .image-block {
+              text-align: center;
+            }
+            .image-block img {
+              max-width: 200px;
+              display: block;
+              margin: 0 auto;
+            }
+            /* Close button styling */
+            .close-button {
+              position: absolute;
+              top: 8px;
+              right: 8px;
+              background: transparent;
+              border: none;
+              font-size: 1.5rem;
+              line-height: 1;
+              cursor: pointer;
+            }
+          </style>
+    
+          <h2>Intake Manager</h2>
+    
+          <!-- Filter Form -->
+          <form id="filter-form">
+            <label for="client_id">Client:</label>
+            <select id="client_id"></select>
+    
+            <label for="menu_date">Menu Date:</label>
+            <input type="text" id="menu_date" />
+    
+            <button type="submit">Search</button>
+          </form>
+    
+          <!-- Table of Intakes -->
+          <table class="intake-table">
+            <thead>
+              <tr>
+                <th>Intake ID</th>
+                <th>Resident ID</th>
+                <th>Estimated %</th>
+                <th>Real %</th>
+                <th>Served</th>
+                <th>Cleared</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+    
+          <!-- Pagination -->
+          <div>
+            <button id="prev-btn">Previous</button>
+            <span id="page-info"></span>
+            <button id="next-btn">Next</button>
           </div>
-          <div class="image-block">
-            <h4>Cleared</h4>
-            <img id="cleared-img" alt="Cleared" />
+    
+          <!-- Detail Panel (Overlay) -->
+          <div id="detail-panel">
+            <!-- The new close (x) button -->
+            <button type="button" id="close-detail-panel" class="close-button">&times;</button>
+    
+            <h3>Intake Detail (<span id="detail-intake-id"></span>)</h3>
+            <div class="image-container">
+              <div class="image-block">
+                <h4>Served</h4>
+                <img id="served-img" alt="Served" />
+              </div>
+              <div class="image-block">
+                <h4>Cleared</h4>
+                <img id="cleared-img" alt="Cleared" />
+              </div>
+            </div>
+    
+            <p>
+              Estimated Intake Percent:
+              <strong id="estimated-intake-percent"></strong>%
+            </p>
+    
+            <form id="detail-form">
+              <label for="real_intake_percent">Real Intake Percent:</label>
+              <input
+                type="number"
+                id="real_intake_percent"
+                name="real_intake_percent"
+                min="0"
+                max="100"
+              />
+              <button type="submit">Save</button>
+            </form>
           </div>
-        </div>
-
-        <p>
-          Estimated Intake Percent:
-          <strong id="estimated-intake-percent"></strong>%
-        </p>
-
-        <form id="detail-form">
-          <label for="real_intake_percent">Real Intake Percent:</label>
-          <input
-            type="number"
-            id="real_intake_percent"
-            name="real_intake_percent"
-            min="0"
-            max="100"
-          />
-          <button type="submit">Save</button>
-        </form>
-      </div>
-    `;
+        `;
     }
 }
 
 customElements.define('intake-manager', IntakeManager);
-
