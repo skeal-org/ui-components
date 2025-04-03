@@ -21,33 +21,25 @@ class FoodItemManager extends HTMLElement {
 
     // Enable/Disable Suggest Nutrition button based on description input length
     descriptionInput.addEventListener('input', () => {
-      if (descriptionInput.value.trim().length > 3) {
-        suggestButton.disabled = false;
-      } else {
-        suggestButton.disabled = true;
-      }
+      suggestButton.disabled = descriptionInput.value.trim().length <= 3;
     });
 
-    // Initialize the button as disabled
     suggestButton.disabled = true;
   }
 
   getApiKey() {
     const secretManager = document.querySelector('secret-manager');
-    if (!secretManager) {
-      throw new Error('SecretManager component not found');
-    }
+    if (!secretManager) throw new Error('SecretManager component not found');
     const apiKey = secretManager.getSecret('openai_api_key');
-    if (!apiKey) {
-      alert('Please set your OpenAI API key in the Secrets tab.');
-    }
+    if (!apiKey) alert('Please set your OpenAI API key in the Secrets tab.');
     return apiKey;
   }
+
   async fetchFoodItems() {
     const { data, error } = await supabaseClient
       .from('fooditem')
       .select('*')
-      .order('id', { ascending: true });
+      .order('id', { ascending: false });
 
     if (error) {
       console.error('Error fetching food items:', error);
@@ -59,15 +51,15 @@ class FoodItemManager extends HTMLElement {
   renderFoodItemList(foodItems) {
     const table = this.shadowRoot.querySelector('.fooditem-table tbody');
     table.innerHTML = foodItems.map(foodItem => `
-        <tr>
-            <td>${foodItem.id}</td>
-            <td>${foodItem.description}</td>
-            <td>${foodItem.category}</td>
-            <td>${foodItem.energy_kcal}</td>
-            <td>${foodItem.proteins_g}</td>
-            <td>${foodItem.carbs_g}</td>
-            <td>${foodItem.fats_g}</td>
-        </tr>
+      <tr>
+        <td>${foodItem.id}</td>
+        <td>${foodItem.description}</td>
+        <td>${foodItem.category}</td>
+        <td>${foodItem.energy_kcal}</td>
+        <td>${foodItem.proteins_g}</td>
+        <td>${foodItem.carbs_g}</td>
+        <td>${foodItem.fats_g}</td>
+      </tr>
     `).join('');
   }
 
@@ -121,128 +113,137 @@ class FoodItemManager extends HTMLElement {
     }));
   }
 
-
   renderSuggestions(suggestions) {
     const list = this.shadowRoot.querySelector('#nutrition-suggestions');
     list.innerHTML = suggestions.map((suggestion, index) => `
       <li>
-          <strong>${suggestion.foodItemName.en} / ${suggestion.foodItemName.fr}</strong><br>
-          Group: ${suggestion.categoryGroup.en} / ${suggestion.categoryGroup.fr}<br>
-          Subgroup: ${suggestion.categorySubGroup.en} / ${suggestion.categorySubGroup.fr}<br>
-          Sub-subgroup: ${suggestion.categorySubSubGroup.en} / ${suggestion.categorySubSubGroup.fr}<br>
-          Similarity: ${(suggestion.similarity * 100).toFixed(2)}%<br>
-          Energy (kcal): ${suggestion.energy_kcal || 0}<br>
-          Proteins (g): ${suggestion.proteins_g || 0}<br>
-          Carbs (g): ${suggestion.carbs_g || 0}<br>
-          Fats (g): ${suggestion.fats_g || 0}<br>
-          <button id="select-suggestion-${index}">Select</button>
+        <strong>${suggestion.foodItemName.en} / ${suggestion.foodItemName.fr}</strong><br>
+        Group: ${suggestion.categoryGroup.en} / ${suggestion.categoryGroup.fr}<br>
+        Subgroup: ${suggestion.categorySubGroup.en} / ${suggestion.categorySubGroup.fr}<br>
+        Sub-subgroup: ${suggestion.categorySubSubGroup.en} / ${suggestion.categorySubSubGroup.fr}<br>
+        Similarity: ${(suggestion.similarity * 100).toFixed(2)}%<br>
+        Energy (kcal): ${suggestion.energy_kcal || 0}<br>
+        Proteins (g): ${suggestion.proteins_g || 0}<br>
+        Carbs (g): ${suggestion.carbs_g || 0}<br>
+        Fats (g): ${suggestion.fats_g || 0}<br>
+        <button id="select-suggestion-${index}">Select</button>
       </li>
-  `).join('');
+    `).join('');
 
-    // Attach event listeners to each "Select" button
     suggestions.forEach((suggestion, index) => {
       const button = this.shadowRoot.querySelector(`#select-suggestion-${index}`);
-      button.addEventListener('click', () => {
-        this.selectSuggestion(suggestion);
-      });
+      button.addEventListener('click', () => this.selectSuggestion(suggestion));
     });
   }
 
   selectSuggestion(suggestion) {
-    const categoryInput = this.shadowRoot.querySelector('input[name="category"]');
-    const energyInput = this.shadowRoot.querySelector('input[name="energy_kcal"]');
-    const proteinsInput = this.shadowRoot.querySelector('input[name="proteins_g"]');
-    const carbsInput = this.shadowRoot.querySelector('input[name="carbs_g"]');
-    const fatsInput = this.shadowRoot.querySelector('input[name="fats_g"]');
-
-    // Populate input fields with selected suggestion values
-    categoryInput.value = suggestion.categorySubGroup.en || '';
-    energyInput.value = suggestion.energy_kcal || 0;
-    proteinsInput.value = suggestion.proteins_g || 0;
-    carbsInput.value = suggestion.carbs_g || 0;
-    fatsInput.value = suggestion.fats_g || 0;
-
-    // Close the popup
+    this.shadowRoot.querySelector('input[name="category"]').value = suggestion.categorySubGroup.en || '';
+    this.shadowRoot.querySelector('input[name="energy_kcal"]').value = suggestion.energy_kcal || 0;
+    this.shadowRoot.querySelector('input[name="proteins_g"]').value = suggestion.proteins_g || 0;
+    this.shadowRoot.querySelector('input[name="carbs_g"]').value = suggestion.carbs_g || 0;
+    this.shadowRoot.querySelector('input[name="fats_g"]').value = suggestion.fats_g || 0;
     this.shadowRoot.querySelector('#nutrition-popup').classList.add('hidden');
-
-    // Notify user of the update
     alert(`Selected food item: ${suggestion.foodItemName.en}`);
   }
 
-
   async createFoodItem(event) {
     event.preventDefault();
+
     const form = event.target;
+    const spinner = this.shadowRoot.querySelector('#add-fooditem-spinner');
+    const errorBox = this.shadowRoot.querySelector('#fooditem-error');
+    const submitBtn = this.shadowRoot.querySelector('button[type="submit"]');
+
+    spinner.classList.remove('hidden');
+    submitBtn.disabled = true;
+    errorBox.classList.add('hidden');
+    errorBox.textContent = '';
+
     const formData = new FormData(form);
-    const newFoodItem = {
-      description: formData.get('description').trim(),
-      category: formData.get('category').trim(),
-      energy_kcal: parseFloat(formData.get('energy_kcal')) || 0,
-      proteins_g: parseFloat(formData.get('proteins_g')) || 0,
-      carbs_g: parseFloat(formData.get('carbs_g')) || 0,
-      fats_g: parseFloat(formData.get('fats_g')) || 0,
-    };
 
-    const { error } = await supabaseClient
-      .from('fooditem')
-      .insert([newFoodItem]);
+    try {
+      const { error } = await supabaseClient.rpc('insert_fooditem_for_current_user', {
+        description: formData.get('description').trim(),
+        category: formData.get('category').trim(),
+        energy_kcal: parseInt(formData.get('energy_kcal')) || 0,
+        proteins_g: parseFloat(formData.get('proteins_g')) || 0,
+        carbs_g: parseFloat(formData.get('carbs_g')) || 0,
+        fats_g: parseFloat(formData.get('fats_g')) || 0
+      });
 
-    if (error) {
-      console.error('Error creating food item:', error);
-      return;
+      if (error) {
+        console.error('Error creating food item:', error);
+        errorBox.textContent = `❌ ${error.message || 'Failed to create food item'}`;
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      // Reset values to 0
+      form.querySelector('input[name="description"]').value = '';
+      form.querySelector('input[name="category"]').value = '';
+      form.querySelector('input[name="energy_kcal"]').value = 0;
+      form.querySelector('input[name="proteins_g"]').value = 0;
+      form.querySelector('input[name="carbs_g"]').value = 0;
+      form.querySelector('input[name="fats_g"]').value = 0;
+
+      this.fetchFoodItems();
+    } finally {
+      spinner.classList.add('hidden');
+      submitBtn.disabled = false;
     }
-
-    form.reset();
-    this.fetchFoodItems();
   }
 
   render() {
     this.shadowRoot.innerHTML = `
-          <style>
-              .hidden {
-                display: none;
-              }
-          </style>
-          <h2>Food Item Manager</h2>
-          <form>
-              <input name="description" placeholder="Description" required>
-              <input name="category" placeholder="Category">
-              <input name="energy_kcal" placeholder="Energy (kcal)" type="number" step="any">
-              <input name="proteins_g" placeholder="Proteins (g)" type="number" step="any">
-              <input name="carbs_g" placeholder="Carbs (g)" type="number" step="any">
-              <input name="fats_g" placeholder="Fats (g)" type="number" step="any">
-              <button type="submit">Add Food Item</button>
-          </form>
-          <button id="suggest-nutrition-btn" disabled>Suggest Nutritional Content</button>
-          <div id="nutrition-popup" class="hidden">
-              <div class="popup-content">
-                  <h3>Suggested Nutritional Content</h3>
-                  <ul id="nutrition-suggestions"></ul>
-                  <button id="close-popup">Close</button>
-              </div>
-          </div>
-          <table class="fooditem-table">
-              <thead>
-                  <tr>
-                      <th>ID</th>
-                      <th>Description</th>
-                      <th>Category</th>
-                      <th>Energy (kcal)</th>
-                      <th>Proteins (g)</th>
-                      <th>Carbs (g)</th>
-                      <th>Fats (g)</th>
-                  </tr>
-              </thead>
-              <tbody></tbody>
-          </table>
-      `;
-  
-    // Attach event listener for close button after rendering
-    this.shadowRoot.querySelector('#close-popup').addEventListener('click', () => {
-      this.shadowRoot.querySelector('#nutrition-popup').classList.add('hidden');
-    });
+      <style>
+        .hidden {
+          display: none;
+        }
+        .spinner {
+          margin-left: 10px;
+          font-size: 1rem;
+        }
+        .error-message {
+          color: red;
+          margin-top: 10px;
+        }
+      </style>
+      <h2>Food Item Manager</h2>
+      <form>
+        <input name="description" placeholder="Description" required>
+        <input name="category" placeholder="Category">
+        <input name="energy_kcal" placeholder="Energy (kcal)" type="number" step="any">
+        <input name="proteins_g" placeholder="Proteins (g)" type="number" step="any">
+        <input name="carbs_g" placeholder="Carbs (g)" type="number" step="any">
+        <input name="fats_g" placeholder="Fats (g)" type="number" step="any">
+        <button type="submit">Add Food Item</button>
+        <span id="add-fooditem-spinner" class="spinner hidden">⏳</span>
+        <div id="fooditem-error" class="error-message hidden"></div>
+      </form>
+      <button id="suggest-nutrition-btn" disabled>Suggest Nutritional Content</button>
+      <div id="nutrition-popup" class="hidden">
+        <div class="popup-content">
+          <h3>Suggested Nutritional Content</h3>
+          <ul id="nutrition-suggestions"></ul>
+          <button id="close-popup">Close</button>
+        </div>
+      </div>
+      <table class="fooditem-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Energy (kcal)</th>
+            <th>Proteins (g)</th>
+            <th>Carbs (g)</th>
+            <th>Fats (g)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
   }
-  
 }
 
 customElements.define('fooditem-manager', FoodItemManager);
